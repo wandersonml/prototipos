@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alerta de Pendências de Execução — Sistema de Caixa</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f0f2f5; font-family: Arial, Helvetica, sans-serif; padding: 20px 0; }
+
+  .email-wrapper { max-width: 1160px; margin: 0 auto; }
+  .email-card { background: #ffffff; border: 1px solid #dde1e7; border-radius: 8px; overflow: hidden; }
+
+  /* ── Header ── */
+  .header { background: #1565C0; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header-logo { background: rgba(255,255,255,0.18); border-radius: 6px; padding: 7px 13px; font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 1.5px; margin-right: 14px; flex-shrink: 0; }
+  .header-title h1 { font-size: 15px; font-weight: 600; color: #fff; }
+  .header-title p { font-size: 11px; color: rgba(255,255,255,0.72); margin-top: 2px; }
+  .header-date { text-align: right; flex-shrink: 0; }
+  .header-date strong { display: block; font-size: 15px; color: #fff; font-weight: 600; }
+  .header-date span { font-size: 11px; color: rgba(255,255,255,0.72); }
+
+  /* ── Summary bar ── */
+  .summary-bar { background: #f7f8fa; border-bottom: 1px solid #dde1e7; padding: 10px 24px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .summary-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #555; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-red    { background: #c62828; }
+  .dot-orange { background: #e65100; }
+  .dot-blue   { background: #1565C0; }
+  .summary-count { font-weight: 700; color: #222; }
+  .summary-total { margin-left: auto; font-size: 12px; color: #555; }
+  .summary-total strong { color: #222; }
+
+  /* ── Section ── */
+  .section { border-top: 2px solid #e0e3e8; }
+  .section:first-of-type { border-top: none; }
+
+  .section-header { padding: 9px 24px; display: flex; align-items: center; gap: 10px; }
+  .section-header.critico     { background: #fff5f5; border-left: 4px solid #c62828; }
+  .section-header.atencao     { background: #fffaf2; border-left: 4px solid #e65100; }
+  .section-header.informativo { background: #f0f6ff; border-left: 4px solid #1565C0; }
+
+  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
+  .section-label.critico     { color: #c62828; }
+  .section-label.atencao     { color: #e65100; }
+  .section-label.informativo { color: #1565C0; }
+  .section-count { font-size: 11px; color: #888; margin-left: auto; }
+
+  /* ── Table ── */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .records-table { width: 100%; min-width: 900px; border-collapse: collapse; table-layout: auto; }
+
+  .records-table thead tr { background: #f7f8fa; }
+  .records-table th {
+    font-size: 10px; font-weight: 700; color: #666;
+    text-transform: uppercase; letter-spacing: 0.45px;
+    padding: 7px 8px; text-align: left;
+    border-bottom: 1px solid #dde1e7;
+    white-space: nowrap;
+  }
+  .records-table th.right { text-align: right; }
+  .records-table th.center { text-align: center; }
+
+  .records-table th:first-child { padding-left: 16px; }
+  .records-table th:last-child  { padding-right: 16px; }
+
+  .records-table tbody tr { border-bottom: 1px solid #edf0f4; }
+  .records-table tbody tr:last-child { border-bottom: none; }
+  .records-table tbody tr:hover { background: #fafbfc; }
+
+  .records-table td {
+    font-size: 11px; color: #222;
+    padding: 8px 8px; vertical-align: middle;
+  }
+  .records-table td:first-child { padding-left: 16px; }
+  .records-table td:last-child  { padding-right: 16px; }
+
+  /* ── Totals row ── */
+  .records-table tfoot tr { background: #f0f2f5; border-top: 2px solid #dde1e7; }
+  .records-table tfoot td {
+    font-size: 11px; font-weight: 700; color: #333;
+    padding: 8px 8px;
+  }
+  .records-table tfoot td:first-child { padding-left: 16px; }
+  .records-table tfoot td:last-child  { padding-right: 16px; }
+
+  /* ── Cell helpers ── */
+  .recibo { font-weight: 700; color: #1565C0; font-size: 12px; white-space: nowrap; }
+  .cliente-nome { font-weight: 600; font-size: 11px; line-height: 1.3; }
+  .cliente-cpf  { font-size: 10px; color: #888; margin-top: 1px; }
+  .desc { font-size: 10px; color: #555; line-height: 1.4; }
+  .tipo { font-size: 10px; color: #333; font-weight: 600; white-space: nowrap; }
+
+  .val { text-align: right; font-size: 11px; white-space: nowrap; }
+  .val-red   { color: #c62828; font-weight: 700; }
+  .val-green { color: #2e7d32; }
+  .val-gray  { color: #888; }
+
+  /* ── Progress ── */
+  .pct-wrap { display: flex; flex-direction: column; gap: 3px; }
+  .pct-bar  { height: 5px; border-radius: 3px; background: #e0e3e8; overflow: hidden; }
+  .pct-fill { height: 100%; border-radius: 3px; }
+  .fill-red    { background: #c62828; }
+  .fill-orange { background: #e65100; }
+  .fill-green  { background: #2e7d32; }
+  .pct-num { font-size: 10px; color: #555; text-align: center; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block; font-size: 9px; font-weight: 700;
+    padding: 2px 6px; border-radius: 10px; white-space: nowrap;
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .badge-red    { background: #ffcdd2; color: #b71c1c; }
+  .badge-orange { background: #ffe0b2; color: #bf360c; }
+  .badge-blue   { background: #bbdefb; color: #0d47a1; }
+  .badge-green  { background: #c8e6c9; color: #1b5e20; }
+  .badge-gray   { background: #e8eaed; color: #555; border: 1px solid #ccc; }
+
+  /* ── Footer ── */
+  .footer { padding: 14px 24px; background: #f7f8fa; border-top: 1px solid #dde1e7; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .footer-left { font-size: 10px; color: #777; line-height: 1.6; }
+  .footer-left strong { color: #333; }
+  .footer-btn {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    color: #1565C0; background: #e3f2fd;
+    border: 1px solid #90caf9; border-radius: 6px;
+    padding: 7px 16px; text-decoration: none; white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+<div class="email-card">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:0;">
+      <div class="header-logo">CAIXA</div>
+      <div class="header-title" style="margin-left:14px;">
+        <h1>Alerta de Pendências de Execução</h1>
+        <p>Sistema de Gestão de Serviços — Envio automático diário</p>
+      </div>
+    </div>
+    <div class="header-date">
+      <strong>04/05/2026</strong>
+      <span>08:00</span>
+    </div>
+  </div>
+
+  <!-- SUMMARY BAR -->
+  <div class="summary-bar">
+    <div class="summary-item"><span class="dot dot-red"></span><span><span class="summary-count">3</span> Crítico</span></div>
+    <div class="summary-item"><span class="dot dot-orange"></span><span><span class="summary-count">2</span> Atenção</span></div>
+    <div class="summary-item"><span class="dot dot-blue"></span><span><span class="summary-count">4</span> Informativo</span></div>
+    <div class="summary-total">Total de pendências: <strong>9</strong></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- BLOCO 1 — CRÍTICO -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header critico">
+      <span class="dot dot-red"></span>
+      <span class="section-label critico">Crítico — Serviços Vencidos / Execução sem Tratamento Financeiro</span>
+      <span class="section-count">3 registros</span>
+    </div>
+    <div class="table-scroll"><table class="records-table">
+      <colgroup>
+        <col class="col-recibo">
+        <col class="col-cliente">
+        <col class="col-desc">
+        <col class="col-tipo">
+        <col class="col-data">
+        <col class="col-data">
+        <col class="col-val">
+        <col class="col-val">
+        <col class="col-val">
+        <col class="col-pct">
+        <col class="col-estorno">
+        <col class="col-sit">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="col-recibo">Recibo</th>
+          <th class="col-cliente">Cliente</th>
+          <th class="col-desc">Serviço / Descrição</th>
+          <th class="col-tipo">Tipo de Serviço</th>
+          <th class="col-data">Dt. Prevista</th>
+          <th class="col-data">Dt. Realizada</th>
+          <th class="col-val right">Vl. Pedido</th>
+          <th class="col-val right">Vl. Executado</th>
+          <th class="col-val right">Saldo</th>
+          <th class="col-pct center">% Exec.</th>
+          <th class="col-estorno center">Estorno</th>
+          <th class="col-sit">Situação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="recibo">145836</span></td>
+          <td>
+            <div class="cliente-nome">MIRIAN DE FATIMA MOREIRA</div>
+            <div class="cliente-cpf">87321688100</div>
+          </td>
+          <td><span class="desc">EV-81728 — Sessão de Negócios Delas Três Lagoas 2026</span></td>
+          <td><span class="tipo">RODADA DE NEGÓCIOS</span></td>
+          <td style="font-size:11px;white-space:nowrap;">12/03/2026</td>
+          <td style="font-size:11px;color:#c62828;">—</td>
+          <td class="val">R$ 50,00</td>
+          <td class="val val-gray">R$ 0,00</td>
+          <td class="val val-red">R$ 50,00</td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar"><div class="pct-fill fill-red" style="width:0%"></div></div>
+              <div class="pct-num">0%</div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="badge badge-gray">Não solicitado</span></td>
+          <td><span class="badge badge-red">Vencido s/ conclusão</span></td>
+        </tr>
+        <tr>
+          <td><span class="recibo">145900</span></td>
+          <td>
+            <div class="cliente-nome">JOAO CARLOS SILVA</div>
+            <div class="cliente-cpf">12345678901</div>
+          </td>
+          <td><span class="desc">EV-82100 — Consultoria Individual Empreendedorismo</span></td>
+          <td><span class="tipo">CONSULTORIA</span></td>
+          <td style="font-size:11px;white-space:nowrap;">20/03/2026</td>
+          <td style="font-size:11px;color:#c62828;">—</td>
+          <td class="val">R$ 300,00</td>
+          <td class="val val-gray">R$ 0,00</td>
+          <td class="val val-red">R$ 300,00</td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar"><div class="pct-fill fill-red" style="width:0%"></div></div>
+              <div class="pct-num">0%</div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="badge badge-gray">Não solicitado</span></td>
+          <td><span class="badge badge-red">Exec. s/ trat. financeiro</span></td>
+        </tr>
+        <tr>
+          <td><span class="recibo">551870</span></td>
+          <td>
+            <div class="cliente-nome">LEONORADO AUGUSTO MARTINS</div>
+            <div class="cliente-cpf">045.443.441-69</div>
+          </td>
+          <td><span class="desc">EV-784930 — Consultoria Hoje é Dia de Feira: Criação de Pratos</span></td>
+          <td><span class="tipo">CONSULTORIA</span></td>
+          <td style="font-size:11px;white-space:nowrap;">20/04/2026</td>
+          <td style="font-size:11px;white-space:nowrap;">25/04/2026</td>
+          <td class="val">R$ 1.300,00</td>
+          <td class="val val-green">R$ 1.300,00</td>
+          <td class="val val-green">R$ 0,00</td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar"><div class="pct-fill fill-orange" style="width:100%"></div></div>
+              <div class="pct-num">100%</div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="badge badge-gray">Não solicitado</span></td>
+          <td><span class="badge badge-red">Vencido +5d s/ conclusão</span></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6" style="text-align:right;font-size:10px;color:#555;font-weight:400;text-transform:uppercase;letter-spacing:0.4px;">Totais do bloco:</td>
+          <td class="val" style="text-align:right;">R$ 1.650,00</td>
+          <td class="val" style="text-align:right;">R$ 1.300,00</td>
+          <td class="val val-red" style="text-align:right;">R$ 350,00</td>
+          <td colspan="3" style="font-size:10px;color:#888;">Saldo em risco: <strong style="color:#c62828;">R$ 350,00</strong></td>
+        </tr>
+      </tfoot>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- BLOCO 2 — ATENÇÃO -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header atencao">
+      <span class="dot dot-orange"></span>
+      <span class="section-label atencao">Atenção — Execução Parcial sem Estorno</span>
+      <span class="section-count">2 registros</span>
+    </div>
+    <div class="table-scroll"><table class="records-table">
+      <colgroup>
+        <col class="col-recibo">
+        <col class="col-cliente">
+        <col class="col-desc">
+        <col class="col-tipo">
+        <col class="col-data">
+        <col class="col-data">
+        <col class="col-val">
+        <col class="col-val">
+        <col class="col-val">
+        <col class="col-pct">
+        <col class="col-estorno">
+        <col class="col-sit">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="col-recibo">Recibo</th>
+          <th class="col-cliente">Cliente</th>
+          <th class="col-desc">Serviço / Descrição</th>
+          <th class="col-tipo">Tipo de Serviço</th>
+          <th class="col-data">Dt. Prevista</th>
+          <th class="col-data">Dt. Realizada</th>
+          <th class="col-val right">Vl. Pedido</th>
+          <th class="col-val right">Vl. Executado</th>
+          <th class="col-val right">Saldo</th>
+          <th class="col-pct center">% Exec.</th>
+          <th class="col-estorno center">Estorno</th>
+          <th class="col-sit">Situação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="recibo">550200</span></td>
+          <td>
+            <div class="cliente-nome">PATRICIA CRISTINA STATELLA</div>
+            <div class="cliente-cpf">022.775.721-67</div>
+          </td>
+          <td><span class="desc">EV-783100 — Caravana Inspira Ecoturismo 2026</span></td>
+          <td><span class="tipo">MISSÃO / CARAVANA</span></td>
+          <td style="font-size:11px;white-space:nowrap;">23/04/2026</td>
+          <td style="font-size:11px;white-space:nowrap;">18/04/2026</td>
+          <td class="val">R$ 2.100,00</td>
+          <td class="val">R$ 1.200,00</td>
+          <td class="val val-red">R$ 900,00</td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar"><div class="pct-fill fill-orange" style="width:57%"></div></div>
+              <div class="pct-num">57%</div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="badge badge-orange">Solicitado</span></td>
+          <td><span class="badge badge-orange">Exec. parcial s/ estorno</span></td>
+        </tr>
+        <tr>
+          <td><span class="recibo">551430</span></td>
+          <td>
+            <div class="cliente-nome">ALINE EL ASSAL</div>
+            <div class="cliente-cpf">CPF: —</div>
+          </td>
+          <td><span class="desc">EV-784200 — Sessão de Negócios Paraíba 16/04/2026</span></td>
+          <td><span class="tipo">RODADA DE NEGÓCIOS</span></td>
+          <td style="font-size:11px;white-space:nowrap;">16/04/2026</td>
+          <td style="font-size:11px;white-space:nowrap;">16/04/2026</td>
+          <td class="val">R$ 79.500,00</td>
+          <td class="val">R$ 50.000,00</td>
+          <td class="val val-red">R$ 29.500,00</td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar"><div class="pct-fill fill-orange" style="width:63%"></div></div>
+              <div class="pct-num">63%</div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="badge badge-gray">Não solicitado</span></td>
+          <td><span class="badge badge-orange">Exec. parcial s/ estorno</span></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6" style="text-align:right;font-size:10px;color:#555;font-weight:400;text-transform:uppercase;letter-spacing:0.4px;">Totais do bloco:</td>
+          <td class="val" style="text-align:right;">R$ 81.600,00</td>
+          <td class="val" style="text-align:right;">R$ 51.200,00</td>
+          <td class="val val-red" style="text-align:right;">R$ 30.400,00</td>
+          <td colspan="3" style="font-size:10px;color:#888;">Saldo em risco: <strong style="color:#e65100;">R$ 30.400,00</strong></td>
+        </tr>
+      </tfoot>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- BLOCO 3 — INFORMATIVO -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header informativo">
+      <span class="dot dot-blue"></span>
+      <span class="section-label informativo">Informativo — Execução não Reconhecida no RM</span>
+      <span class="section-count">4 registros</span>
+    </div>
+    <div class="table-scroll"><table class="records-table">
+      <colgroup>
+        <col class="col-recibo">
+        <col class="col-cliente">
+        <col class="col-desc">
+        <col class="col-tipo">
+        <col class="col-data">
+        <col class="col-data">
+        <col class="col-val">
+        <col class="col-val">
+        <col class="col-val">
+        <col class="col-pct">
+        <col class="col-estorno">
+        <col class="col-sit">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="col-recibo">Recibo</th>
+          <th class="col-cliente">Cliente</th>
+          <th class="col-desc">Serviço / Descrição</th>
+          <th class="col-tipo">Tipo de Serviço</th>
+          <th class="col-data">Dt. Prevista</th>
+          <th class="col-data">Dt. Realizada</th>
+          <th class="col-val right">Vl. Pedido</th>
+          <th class="col-val right">Vl. Executado</th>
+          <th class="col-val right">Saldo</th>
+          <th class="col-pct center">% Exec.</th>
+          <th class="col-estorno center">RM</th>
+          <th class="col-sit">Situação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="recibo">551410</span></td>
+          <td>
+            <div class="cliente-nome">CARLOS MENDES FREITAS</div>
+            <div class="cliente-cpf">033.122.876-45</div>
+          </td>
+          <td><span class="desc">EV-784500 — Workshop Transformação Digital PME</span></td>
+          <td><span class="tipo">WORKSHOP</span></td>
+          <td style="font-size:11px;white-space:nowrap;">28/04/2026</td>
+          <td style="font-size:11px;white-space:nowrap;">28/04/2026</td>
+          <td class="val">R$ 4.500,00</td>
+          <td class="val val-green">R$ 4.500,00</td>
+          <td class="val val-green">R$ 0,00</td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar"><div class="pct-fill fill-green" style="width:100%"></div></div>
+              <div class="pct-num">100%</div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="badge badge-blue">Não reconhecido</span></td>
+          <td><span class="badge badge-blue">Exec. s/ reconhec. RM</span></td>
+        </tr>
+        <tr>
+          <td><span class="recibo">551395</span></td>
+          <td>
+            <div class="cliente-nome">ANA LUCIA BORGES</div>
+            <div class="cliente-cpf">044.988.211-90</div>
+          </td>
+          <td><span class="desc">EV-784100 — Imersão Empreendedora Setor de Saúde</span></td>
+          <td><span class="tipo">IMERSÃO</span></td>
+          <td style="font-size:11px;white-space:nowrap;">25/04/2026</td>
+          <td style="font-size:11px;white-space:nowrap;">25/04/2026</td>
+          <td class="val">R$ 800,00</td>
+          <td class="val val-green">R$ 800,00</td>
+          <td class="val val-green">R$ 0,00</td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar"><div class="pct-fill fill-green" style="width:100%"></div></div>
+              <div class="pct-num">100%</div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="badge badge-blue">Não reconhecido</span></td>
+          <td><span class="badge badge-blue">Exec. s/ reconhec. RM</span></td>
+        </tr>
+        <tr>
+          <td><span class="recibo">551502</span></td>
+          <td>
+            <div class="cliente-nome">ROBERTO CESAR LEAL</div>
+            <div class="cliente-cpf">055.321.099-77</div>
+          </td>
+          <td><span class="desc">EV-785010 — Missão Tecnologia e Inovação Curitiba</span></td>
+          <td><span class="tipo">MISSÃO / CARAVANA</span></td>
+          <td style="font-size:11px;white-space:nowrap;">30/04/2026</td>
+          <td style="font-size:11px;white-space:nowrap;">30/04/2026</td>
+          <td class="val">R$ 3.200,00</td>
+          <td class="val val-green">R$ 3.200,00</td>
+          <td class="val val-green">R$ 0,00</td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar"><div class="pct-fill fill-green" style="width:100%"></div></div>
+              <div class="pct-num">100%</div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="badge badge-blue">Não reconhecido</span></td>
+          <td><span class="badge badge-blue">Exec. s/ reconhec. RM</span></td>
+        </tr>
+        <tr>
+          <td><span class="recibo">551610</span></td>
+          <td>
+            <div class="cliente-nome">FERNANDA SOUZA LIMA</div>
+            <div class="cliente-cpf">066.412.144-33</div>
+          </td>
+          <td><span class="desc">EV-785200 — Curso Gestão Financeira para MEI</span></td>
+          <td><span class="tipo">CURSO / CAPACITAÇÃO</span></td>
+          <td style="font-size:11px;white-space:nowrap;">02/05/2026</td>
+          <td style="font-size:11px;white-space:nowrap;">02/05/2026</td>
+          <td class="val">R$ 650,00</td>
+          <td class="val val-green">R$ 650,00</td>
+          <td class="val val-green">R$ 0,00</td>
+          <td>
+            <div class="pct-wrap">
+              <div class="pct-bar"><div class="pct-fill fill-green" style="width:100%"></div></div>
+              <div class="pct-num">100%</div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="badge badge-blue">Não reconhecido</span></td>
+          <td><span class="badge badge-blue">Exec. s/ reconhec. RM</span></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6" style="text-align:right;font-size:10px;color:#555;font-weight:400;text-transform:uppercase;letter-spacing:0.4px;">Totais do bloco:</td>
+          <td class="val" style="text-align:right;">R$ 9.150,00</td>
+          <td class="val val-green" style="text-align:right;">R$ 9.150,00</td>
+          <td class="val val-green" style="text-align:right;">R$ 0,00</td>
+          <td colspan="3" style="font-size:10px;color:#888;">Pendente de reconhecimento: <strong style="color:#1565C0;">R$ 9.150,00</strong></td>
+        </tr>
+      </tfoot>
+    </table></div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      <strong>Sistema de Gestão de Caixa</strong><br>
+      Este é um e-mail automático. Pendências serão reenviadas diariamente até sua resolução.<br>
+      Destinatários: Gestor Operacional · Gestor Financeiro · Fiscal do Contrato
+    </div>
+    <a class="footer-btn" href="#">Acessar Sistema</a>
+  </div>
+
+</div><!-- /email-card -->
+</div><!-- /email-wrapper -->
+</body>
+</html>
