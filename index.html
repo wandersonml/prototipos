@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protótipos - SEBRAE</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+            padding: 40px 20px;
+        }
+        .header h1 {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        .project-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+        }
+        .project-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .project-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .project-header h2 {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+        .project-content {
+            padding: 25px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .project-description {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .project-items {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+        .project-items li {
+            padding: 8px 0;
+            color: #666;
+            font-size: 13px;
+            padding-left: 20px;
+            position: relative;
+        }
+        .project-items li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+        .project-footer {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .project-footer a {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: opacity 0.3s ease;
+        }
+        .project-footer a:hover {
+            opacity: 0.9;
+        }
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 30px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .footer a {
+            color: white;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Protótipos SEBRAE</h1>
+            <p>Coleção de protótipos interativos</p>
+        </div>
+
+        <div class="projects-grid">
+            <!-- Caixa -->
+            <a href="caixa-reconhecimento-receitas/" class="project-card">
+                <div class="project-header">
+                    <h2>💰 Caixa</h2>
+                    <p>Reconhecimento de Receitas</p>
+                </div>
+                <div class="project-content">
+                    <p class="project-description">Protótipos de interfaces para gerenciamento e reconhecimento de receitas no sistema de caixa.</p>
+                    <ul class="project-items">
+                        <li>Guia de Reconhecimento</li>
+                        <li>Relatórios de Receitas</li>
+                    </ul>
+                    <div class="project-footer">
+                        <a href="caixa-reconhecimento-receitas/">Ver Protótipos →</a>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Consultorias -->
+            <a href="consultorias-reconhecimento-receita/" class="project-card">
+                <div class="project-header">
+                    <h2>📋 Consultorias</h2>
+                    <p>Reconhecimento de Receita</p>
+                </div>
+                <div class="project-content">
+                    <p class="project-description">Protótipos de interfaces para gerenciamento de consultorias e horas de execução.</p>
+                    <ul class="project-items">
+                        <li>Detalhes de Estorno</li>
+                        <li>Devoluções Parciais</li>
+                        <li>Alertas por Email</li>
+                        <li>Relatório de Execução</li>
+                        <li>Aprovação Fiscal</li>
+                        <li>Lançamento de Horas</li>
+                    </ul>
+                    <div class="project-footer">
+                        <a href="consultorias-reconhecimento-receita/">Ver Protótipos →</a>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>Protótipos desenvolvidos para <strong>SEBRAE</strong> usando HTML, CSS e JavaScript puro</p>
+            <p style="margin-top: 10px; font-size: 12px;">
+                Repositório: <a href="https://github.com/wandersonml/prototipos" target="_blank">github.com/wandersonml/prototipos</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
